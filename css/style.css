@@ -1,0 +1,76 @@
+
+body {
+  font-family: optima;
+}
+.state rect {
+  /*fill: #dedede;*/
+}
+.state text {
+  font: 12px sans-serif;
+  text-anchor: middle;
+  pointer-events: none;
+}
+.state--selected rect {
+  /*fill: #9f4a6c;*/
+}
+.state--selected text {
+  fill: white;
+}
+
+.axis path,
+.axis line {
+    fill: none;
+    stroke: black;
+    shape-rendering: crispEdges;
+}
+
+.axis text {
+    font-family: optima;
+    font-size: 11px;
+}
+
+strong.normal{
+  font-weight: normal;
+  color: "black";
+}
+
+strong.choosen{
+  color: "red";
+}
+
+.groupings.selected {
+  color: "red";
+}
+
+#next {
+    font-weight: bold;
+    color: steelblue;
+    font-size: 20;
+}
+
+#text {
+    font-size: 16;
+}
+
+.top {
+    height: 100;
+}
+
+.top #chooseText {
+    font-size: 18;
+    position: absolute;
+    bottom: 0;
+    right: 0;
+}
+
+span.selected {
+    color: steelblue;
+    font-weight: bold;
+}
+#choose {
+    font-size: 20;
+    font-style: oblique;
+}
+/*#menu {
+    border-left: 1px solid;
+}*/

@@ -1,11 +1,11 @@
-function scatter() {
+function histogram() {
 
     // All options that should be accessible to caller
     // h= 2∗iqr(data)∗Math.pow(25,(-1/3)) //implement this after it's working
     var bins = 20;
     var width = 500;
     var height = 500;
-    var padding = 20;
+    var padding = {top: 10, right: 30, bottom: 30, left: 30}
     var animationDuration = 1000
     var delayValue = 15
     var pointsColor = "steelblue"
@@ -20,100 +20,121 @@ function scatter() {
     function chart(selection){
         selection.each(function () {
 
-            // I am assuming that the data passed includes a x and y field.
-            var extent_x = d3.extent(data,function(d){return d.x});
-            //if the values are the same let's make sure the visualization puts it in the middle of the screen
-            if((extent_x[0] - extent_x[1]) == 0){extent_x =[extent_x[1] - 1, extent_x[1] + 1] }
+            // // Generate a Bates distribution of 10 random variables.
+            // var values = d3.range(1000).map(d3.random.bates(10));
 
-            var extent_y = d3.extent(data,function(d){return d.y});
-            //if the values are the same let's make sure the visualization puts it in the middle of the screen
-            if((extent_y[0] - extent_y[1]) == 0){extent_y =[extent_y[1] - 1, extent_y[1]] }
+            // A formatter for counts.
+            var formatCount = d3.format(",.0f");
 
-            var scale_x = d3.scale.linear()
-                .domain(extent_x)
-                .range([padding, width-padding]);
+            var x = d3.scale.linear()
+                .domain([0, 1])
+                .range([0, width]);
 
-            var scale_y = d3.scale.linear()
-                .domain(extent_y)
-                .range([height-padding, padding]);
+            // Generate a histogram using twenty uniformly-spaced bins.
+            var hist = d3.layout.histogram()
+                .bins(x.ticks(20))
+                (data);
 
-            var dom = d3.select(this);
-            var svg = dom.append('svg')
-                .attr('class', 'scatterplot')
-                .attr('height', height)
-                .attr('width', width)
-                .style('fill', fillColor);
+            var y = d3.scale.linear()
+                .domain([0, d3.max(hist, function(d) { return d.y; })])
+                .range([height, 0]);
 
-            var points = svg.selectAll('circle.display-points')
-                .data(data).enter()
-                .append('circle')
-                .attr('class', 'display-points')
-                .attr('cx', function (d) { return scale_x(d.x);  })
-                .attr('cy', function (d) { return scale_y(d.y);  })
-                .attr('r', radius) //this will eventually need to be modifyable by the code.
-                .attr('fill', pointsColor)
+            var xAxis = d3.svg.axis()
+                .scale(x)
+                .orient("bottom");
 
-            // update functions
-            updateWidth = function() {
-                scale_x.range([padding, width-padding]); //update the scale function
-                points.transition().duration(animationDuration).attr('cx', function (d) { return scale_x(d.x);  })
-                svg.transition().duration(animationDuration).attr('width', width);
-            };
+            var svg = d3.select("body").append("svg")
+                .attr("width",  width + padding.left + padding.right)
+                .attr("height", height + padding.top + padding.bottom)
+              .append("g")
+                .attr("transform", "translate(" + padding.left + "," + padding.top + ")");
 
-            updateHeight = function() {
-                scale_y.range([height-padding, padding]); //update the scale
-                points.transition().duration(animationDuration).attr('cy', function (d) { return scale_y(d.y);  }) //move the dots
-                svg.transition().duration(animationDuration).attr('height', height); //update the svg
-            };
+            var bar = svg.selectAll(".bar")
+                .data(hist)
+              .enter().append("g")
+                .attr("class", "bar")
+                .style("fill", "steelblue")
+                .attr("transform", function(d) { return "translate(" + x(d.x) + "," + y(d.y) + ")"; });
 
-            updateFillColor = function() {
-                svg.transition().duration(animationDuration).style('fill', fillColor);
-            };
+            bar.append("rect")
+                .attr("x", 1)
+                .attr("width", x(hist[0].dx) - 1)
+                .attr("height", function(d) { return height - y(d.y); });
 
-            updateData = function() {
-                //calculate new data extents
-                var extent_x = d3.extent(data,function(d){return d.x});
-                if((extent_x[0] - extent_x[1]) == 0){extent_x =[extent_x[1] - 1, extent_x[1] + 1] }
+            bar.append("text")
+                .attr("dy", ".75em")
+                .attr("y", 6)
+                .attr("x", x(hist[0].dx) / 2)
+                .attr("text-anchor", "middle")
+                .style("fill", "white")
+                .text(function(d) { return formatCount(d.y); });
 
-                var extent_y = d3.extent(data,function(d){return d.y});
-                if((extent_y[0] - extent_y[1]) == 0){extent_y =[extent_y[1] - 1, extent_y[1] ] }
+            svg.append("g")
+                .attr("class", "x axis")
+                .attr("transform", "translate(0," + height + ")")
+                .call(xAxis);
 
-                //update the scales with the new extents
-                scale_x.domain(extent_x)
-                scale_y.domain(extent_y)
-
-                var update = svg.selectAll('circle.display-points')
-                    .data(data);
-
-                update
-                    .transition()
-                    .duration(animationDuration)
-                    .delay(function(d, i) { return (data.length - i) * 15; })
-                    .attr('cx', function (d) { return scale_x(d.x);  })
-                    .attr('cy', function (d) { return scale_y(d.y);  })
-
-                update.enter()
-                    .append('circle')
-                    .attr('class', 'display-points')
-                    .attr('cx', 0)
-                    .attr('cy', 0)
-                    .attr('r', 0)
-                    .attr('fill', pointsColor)
-                    .transition()
-                    .duration(animationDuration)
-                    .delay(function(d, i) { return (data.length - i) * 15; })
-                    .attr('cx', function (d) { return scale_x(d.x);  })
-                    .attr('cy', function (d) { return scale_y(d.y);  })
-                    .attr('r', radius) //this will eventually need to be modifyable by the code.
-
-                update.exit()
-                    .transition()
-                    .duration(650)
-                    .delay(function(d, i) { return (data.length - i) * 15; })
-                    .attr('r', 0)
-                    .remove();
-            }
-
+    //         // update functions
+    //         updateWidth = function() {
+    //             scale_x.range([padding, width-padding]); //update the scale function
+    //             points.transition().duration(animationDuration).attr('cx', function (d) { return scale_x(d.x);  })
+    //             svg.transition().duration(animationDuration).attr('width', width);
+    //         };
+    //
+    //         updateHeight = function() {
+    //             scale_y.range([height-padding, padding]); //update the scale
+    //             points.transition().duration(animationDuration).attr('cy', function (d) { return scale_y(d.y);  }) //move the dots
+    //             svg.transition().duration(animationDuration).attr('height', height); //update the svg
+    //         };
+    //
+    //         updateFillColor = function() {
+    //             svg.transition().duration(animationDuration).style('fill', fillColor);
+    //         };
+    //
+    //         updateData = function() {
+    //             //calculate new data extents
+    //             var extent_x = d3.extent(data,function(d){return d.x});
+    //             if((extent_x[0] - extent_x[1]) == 0){extent_x =[extent_x[1] - 1, extent_x[1] + 1] }
+    //
+    //             var extent_y = d3.extent(data,function(d){return d.y});
+    //             if((extent_y[0] - extent_y[1]) == 0){extent_y =[extent_y[1] - 1, extent_y[1] ] }
+    //
+    //             //update the scales with the new extents
+    //             scale_x.domain(extent_x)
+    //             scale_y.domain(extent_y)
+    //
+    //             var update = svg.selectAll('circle.display-points')
+    //                 .data(data);
+    //
+    //             update
+    //                 .transition()
+    //                 .duration(animationDuration)
+    //                 .delay(function(d, i) { return (data.length - i) * 15; })
+    //                 .attr('cx', function (d) { return scale_x(d.x);  })
+    //                 .attr('cy', function (d) { return scale_y(d.y);  })
+    //
+    //             update.enter()
+    //                 .append('circle')
+    //                 .attr('class', 'display-points')
+    //                 .attr('cx', 0)
+    //                 .attr('cy', 0)
+    //                 .attr('r', 0)
+    //                 .attr('fill', pointsColor)
+    //                 .transition()
+    //                 .duration(animationDuration)
+    //                 .delay(function(d, i) { return (data.length - i) * 15; })
+    //                 .attr('cx', function (d) { return scale_x(d.x);  })
+    //                 .attr('cy', function (d) { return scale_y(d.y);  })
+    //                 .attr('r', radius) //this will eventually need to be modifyable by the code.
+    //
+    //             update.exit()
+    //                 .transition()
+    //                 .duration(650)
+    //                 .delay(function(d, i) { return (data.length - i) * 15; })
+    //                 .attr('r', 0)
+    //                 .remove();
+    //         }
+    //
         });
     }
 

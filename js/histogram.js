@@ -2,7 +2,7 @@ function histogram() {
 
     // All options that should be accessible to caller
     // h= 2∗iqr(data)∗Math.pow(25,(-1/3)) //implement this after it's working
-    var bins = 20;
+    var bins = 50;
     var width = 500;
     var height = 500;
     var padding = {top: 10, right: 30, bottom: 30, left: 30}
@@ -20,9 +20,6 @@ function histogram() {
     function chart(selection){
         selection.each(function () {
 
-            // // Generate a Bates distribution of 10 random variables.
-            // var values = d3.range(1000).map(d3.random.bates(10));
-
             // A formatter for counts.
             var formatCount = d3.format(",.0f");
 
@@ -32,7 +29,7 @@ function histogram() {
 
             // Generate a histogram using twenty uniformly-spaced bins.
             var hist = d3.layout.histogram()
-                .bins(x.ticks(20))
+                .bins(x.ticks(bins))
                 (data);
 
             var y = d3.scale.linear()
@@ -74,13 +71,28 @@ function histogram() {
                 .attr("transform", "translate(0," + height + ")")
                 .call(xAxis);
 
-    //         // update functions
-    //         updateWidth = function() {
-    //             scale_x.range([padding, width-padding]); //update the scale function
-    //             points.transition().duration(animationDuration).attr('cx', function (d) { return scale_x(d.x);  })
-    //             svg.transition().duration(animationDuration).attr('width', width);
-    //         };
-    //
+            // update functions
+            updateWidth = function() {
+                x.range([0, width]); //update the scale function
+
+                bar.selectAll("g")
+                    .transition()
+                    .duration(animationDuration)
+                    .attr("transform", function(d) { return "translate(" + x(d.x) + "," + y(d.y) + ")"; });
+
+                bar.selectAll("rect")
+                    .transition()
+                    .duration(animationDuration)
+                    .attr("width", x(hist[0].dx) - 1)
+
+                bar.selectAll("text")
+                    .transition()
+                    .duration(animationDuration)
+                    .attr("x", x(hist[0].dx) / 2)
+
+                svg.transition().duration(animationDuration).attr('width', width);
+            };
+
     //         updateHeight = function() {
     //             scale_y.range([height-padding, padding]); //update the scale
     //             points.transition().duration(animationDuration).attr('cy', function (d) { return scale_y(d.y);  }) //move the dots

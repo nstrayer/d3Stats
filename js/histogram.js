@@ -11,6 +11,7 @@ function histogram() {
     var pointsColor = "steelblue"
     var fillColor = 'coral';
     var data = [];
+    var svg;
 
     var updateWidth;
     var updateHeight;
@@ -27,7 +28,7 @@ function histogram() {
                 .domain([0, 1])
                 .range([0, width]);
 
-            // Generate a histogram using twenty uniformly-spaced bins.
+            // Generate a histogram.
             var hist = d3.layout.histogram()
                 .bins(x.ticks(bins))
                 (data);
@@ -40,7 +41,7 @@ function histogram() {
                 .scale(x)
                 .orient("bottom");
 
-            var svg = d3.select("body").append("svg")
+            svg = d3.select("body").append("svg")
                 .attr("width",  width + padding.left + padding.right)
                 .attr("height", height + padding.top + padding.bottom)
               .append("g")
@@ -90,14 +91,33 @@ function histogram() {
                     .duration(animationDuration)
                     .attr("x", x(hist[0].dx) / 2)
 
-                svg.transition().duration(animationDuration).attr('width', width);
+                svg = d3.select("body").append("svg")
+                    .transition().duration(animationDuration)
+                    .attr("width",  width + padding.left + padding.right)
+                    .attr("height", height + padding.top + padding.bottom)
+
+                svg.select("g")
+                    .transition().duration(animationDuration)
+                    .attr("transform", "translate(" + padding.left + "," + padding.top + ")");
+
             };
 
-    //         updateHeight = function() {
-    //             scale_y.range([height-padding, padding]); //update the scale
-    //             points.transition().duration(animationDuration).attr('cy', function (d) { return scale_y(d.y);  }) //move the dots
-    //             svg.transition().duration(animationDuration).attr('height', height); //update the svg
-    //         };
+            updateHeight = function() {
+
+                y.range([height, 0]); //update the scale function
+
+                bar.selectAll("g") //Move the whole g
+                    .transition()
+                    .duration(animationDuration)
+                    .attr("transform", function(d) { return "translate(" + x(d.x) + "," + y(d.y) + ")"; });
+
+                bar.selectAll("rect") //stretch of shrink the bars.
+                    .transition()
+                    .duration(animationDuration)
+                    .attr("height", function(d) { return height - y(d.y); });
+
+                svg.transition().duration(animationDuration).attr('height', height); //update the svg
+            };
     //
     //         updateFillColor = function() {
     //             svg.transition().duration(animationDuration).style('fill', fillColor);

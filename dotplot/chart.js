@@ -5,6 +5,9 @@ var Chart = function(opts) {
     this.bins    = opts.bins;
     this.color   = "steelblue" //default color
     this.speed = 1000;
+    this.mouseOver = function(d){
+        console.log(d)
+    }
 
     // create the chart
     this.draw();
@@ -12,7 +15,7 @@ var Chart = function(opts) {
 
 Chart.prototype.draw = function() {
     // define width, height and paddings
-    this.padding = 20;
+    this.padding = 40;
     this.width   = this.element.offsetWidth - (2*this.padding);
     this.height  = (this.width / 2) - (2*this.padding);
 
@@ -27,67 +30,58 @@ Chart.prototype.draw = function() {
         .attr("transform", "translate(" + this.padding + "," + this.padding + ")");
 
     // create the other stuff
-    this.createXScale();
+    this.createYScale();
     this.generateHist(this.bins); //convert data to histogram layout
-    this.createYScale(); //make the y scale based on that hist data.
+    this.createXScale(); //make the y scale based on that hist data.
     this.drawHist(); //actually draw the histogram
     this.addAxes(); //draw the axes
     this.setColor(this.color) //color the chart.
 }
 
-Chart.prototype.createXScale = function(){
-    // shorthand to save typing later
-    var w = this.width,
-        raw_data = this.data;
+Chart.prototype.createYScale = function(){
+    this.yScale = d3.scale.linear()
+        .domain(d3.extent(this.data))
+        .range([this.height,0]);
 
-    this.xScale = d3.scale.linear()
-        .domain(d3.extent(raw_data))
-        .range([0, w]);
+    console.log(d3.extent(this.data))
 }
 
 Chart.prototype.generateHist = function(){
-
     // Generate a histogram w/ uniformly-spaced bins.
     this.hist_data = d3.layout.histogram()
-        .bins(this.xScale.ticks(this.bins))
+        .bins(this.yScale.ticks(this.bins))
         (this.data);
 }
 
-Chart.prototype.createYScale = function(){
-    this.yScale = d3.scale.linear()
+Chart.prototype.createXScale = function(){
+    this.xScale = d3.scale.linear()
         .domain([0, d3.max(this.hist_data, function(d) { return d.y; })])
-        .range([this.height, 0]);
+        .range([0, this.width]);
 }
 
 Chart.prototype.addAxes = function(){
 
-    var h = this.height,
-        w = this.width;
-
-    var xAxis = d3.svg.axis()
-        .scale(this.xScale)
-        .orient("bottom");
+    var yAxis = d3.svg.axis()
+        .scale(this.yScale)
+        .orient("left");
 
     this.plot.append("g")
-        .attr("class", "x axis")
-        .attr("transform", "translate(0," + h + ")")
-        .call(xAxis)
+        .attr("class", "y axis")
+        .attr("transform", "translate(" + 0 + ",0)")
+        .call(yAxis)
             .selectAll("text")
-            .attr("transform", "translate( 0 ," + -4 + ")");
+            .attr("transform", "translate( 4 ," + -6 + ")");
 }
 
 Chart.prototype.updateAxes = function(){
 
-    var h = this.height,
-        w = this.width;
-
-    var xAxis = d3.svg.axis()
+    var yAxis = d3.svg.axis()
         .scale(this.xScale)
-        .orient("bottom");
+        .orient("right");
 
     this.plot.select(".x.axis").transition()
-        .attr("transform", "translate(0," + h + ")")
-        .call(xAxis)
+        .attr("transform", "translate(0," + this.height + ")")
+        .call(yAxis)
             .selectAll("text")
             .attr("transform", "translate( 0 ," + -4 + ")");
 }
@@ -101,73 +95,67 @@ Chart.prototype.drawHist = function(){
         x = this.xScale,
         y = this.yScale
         hist_data = this.hist_data,
-        bin_width = x(this.min + hist_data[0].dx),
-        radius = (h - y(hist_data[0].y)) / hist_data[0].length,
-        speed = this.speed;
+        bin_width = h - y(this.min + hist_data[0].dx), //these are flipped because of the vertical plots.
+        radius = (x(hist_data[0].y)) / hist_data[0].length,
+        speed  = this.speed;
 
     // A formatter for counts.
     var formatCount = d3.format(",.0f");
 
-    var hist = this.plot.selectAll(".bar")
+    var hist = this.plot.selectAll(".dots")
         .data(this.hist_data)
 
     hist.transition()
-        .attr("transform", function(d) { return "translate(" + x(d.x) + "," + y(d.y) + ")"; })
+        .attr("transform", function(d) { return "translate(" + x(d.y) + "," + y(d.x) + ")"; })
         .each(function(d){
-
-            var dots = d3.select(this).selectAll("circle").data(d)
+            var yPos = x(d.y),
+                dots = d3.select(this).selectAll("circle").data(d);
 
             dots.transition().duration(speed)
                 .attr("r", radius/2)
-                .attr("cy", function(d,i){return (radius)*i + radius/2})
-                .attr("cx", bin_width/2)
+                .attr("cy", -radius/2)
+                .attr("cx", function(d,i){return -yPos + (radius)*i + radius/2})
 
             dots.enter()
                 .append("circle")
                 .attr("r", radius/2)
-                .attr("cy", h)
-                .attr("cx", bin_width/2)
+                .attr("cx", w)
+                .attr("cy", -radius/2)
                 .transition().duration(speed)
-                .attr("cy", function(d,i){return (radius)*i + radius/2})
+                .attr("cx", function(d,i){return -yPos + (radius)*i + radius/2})
 
             dots.exit()
                 .transition().duration(speed)
-                .attr("cy", h)
+                .attr("cx", w)
                 .remove()
 
-            d3.select(this).select("text") //update the text
-                .transition()
-                .attr("x", bin_width / 2)
-                .attr("y", -14)
-                .text(function(d) { return d.y != 0 ? formatCount(d.y) : ""; });
+            dots.on("click", this.mouseOver)
         });
 
     hist.enter().append("g")
-        .attr("class", "bar")
-        .attr("transform", function(d) { return "translate(" + x(d.x) + "," + y(d.y) + ")"; })
+        .attr("class", "dots")
+        .attr("transform", function(d) { return "translate(" + x(d.y) + "," + y(d.x) + ")"; })
         .each(function(d){
+            var yPos = x(d.y)
             d3.select(this).selectAll("circle")
                 .data(d).enter().append("circle")
                 .attr("r", radius/2)
-                .attr("cy", function(d,i){return (radius)*i + radius/2})
-                .attr("cx", bin_width/2)
-
-            d3.select(this).append("text") //draw the text
-                .attr("dy", ".75em")
-                .attr("y", -14)
-                .attr("x", bin_width / 2)
-                .attr("text-anchor", "middle")
-                .attr("fill", "#fff;")
-                .text(function(d) { return d.y != 0 ? formatCount(d.y) : "";  });
+                .attr("cx", function(d,i){return -yPos + (radius)*i + radius/2})
+                .attr("cy", -radius/2)
+                .on("click", this.mouseOver)
         });
 
     hist.exit()
         .remove()
+
+    hist.on("mouseover", function(d){
+        var range = "There are " + d.length + " values from " + d.x + " to " + (d.x + d.dx);
+        console.log(range)
+    })
 }
 
 // the following are "public methods"
 // which can be used by code outside of this file
-
 Chart.prototype.setColor = function(newColor) {
 
     this.plot.selectAll('circle')
@@ -180,9 +168,9 @@ Chart.prototype.setColor = function(newColor) {
 Chart.prototype.setData = function(newData) {
     this.data = newData;
 
-    this.createXScale();
-    this.generateHist(this.bins);
     this.createYScale();
+    this.generateHist(this.bins);
+    this.createXScale();
     this.updateAxes();
     this.drawHist();
     this.setColor(this.color);

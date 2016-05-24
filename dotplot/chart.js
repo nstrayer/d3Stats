@@ -106,15 +106,19 @@ Chart.prototype.drawHist = function(){
         .data(this.hist_data)
 
     hist.transition()
-        .attr("transform", function(d) { return "translate(" + x(d.y) + "," + y(d.x) + ")"; })
+        .attr("transform", function(d) { return "translate(" + (w/2) + "," + y(d.x) + ")"; })
         .each(function(d){
+            var totalLength = radius*d.length
+
             var yPos = x(d.y),
                 dots = d3.select(this).selectAll("circle").data(d);
+
+            dots.exit().remove()
 
             dots.transition().duration(speed)
                 .attr("r", radius/2)
                 .attr("cy", -radius/2)
-                .attr("cx", function(d,i){return -yPos + (radius)*i + radius/2})
+                .attr("cx", function(d,i){return -totalLength/2 + (radius)*i + radius/2})
 
             dots.enter()
                 .append("circle")
@@ -122,27 +126,22 @@ Chart.prototype.drawHist = function(){
                 .attr("cx", w)
                 .attr("cy", -radius/2)
                 .transition().duration(speed)
-                .attr("cx", function(d,i){return -yPos + (radius)*i + radius/2})
-
-            dots.exit()
-                .transition().duration(speed)
-                .attr("cx", w)
-                .remove()
-
-            dots.on("click", this.mouseOver)
+                .attr("cx", function(d,i){return -totalLength/2 + (radius)*i + radius/2})
         });
 
     hist.enter().append("g")
         .attr("class", "dots")
-        .attr("transform", function(d) { return "translate(" + x(d.y) + "," + y(d.x) + ")"; })
+        .attr("transform", function(d) { return "translate(" + (w/2) + "," + y(d.x) + ")"; })
         .each(function(d){
+            var totalLength = radius*d.length
             var yPos = x(d.y)
             d3.select(this).selectAll("circle")
                 .data(d).enter().append("circle")
                 .attr("r", radius/2)
-                .attr("cx", function(d,i){return -yPos + (radius)*i + radius/2})
+                .attr("cx", w)
                 .attr("cy", -radius/2)
-                .on("click", this.mouseOver)
+                .transition().duration(speed)
+                .attr("cx", function(d,i){return -totalLength/2 + (radius)*i + radius/2})
         });
 
     hist.exit()

@@ -1,6 +1,7 @@
 <!-- load in D3 and Chart constructor scripts -->
 <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/d3/3.5.17/d3.min.js"></script>
-<script src="chart.js"></script>
+<script src="single_dotplot.js"></script>
+<script src="dotplots.js"></script>
 
 <style>
 /* a little bit of CSS to make the chart readable */
@@ -24,29 +25,35 @@
 <button class="data">change data</button>
 
 <script>
-// create new chart using Chart constructor
-var chart = new Chart({
-	element: document.querySelector('.chart-container'),
-    data: d3.range(1000).map(d3.random.normal()),
-    bins: 40
-});
 
-// change line colour on click
-d3.selectAll('button.color').on('click', function(){
-    var color = d3.select(this).text().split(' ')[0];
-    chart.setColor( color );
-});
+function generateData(groups){
+    var data = []
+    groups.forEach(function(group){
+        var numberOfValues = 500;
+        var randomNumbers = d3.range(numberOfValues).map(d3.random.normal())
+        randomNumbers.forEach( function(num){
+            data.push( {"group": group, "val": num} )
+        } )
+    })
+    return data;
+}
 
-// change data on click to something randomly-generated
-d3.selectAll('button.data').on('click', function(){
-    chart.setData(d3.range(1000).map(d3.random.normal()));
-});
+var data_for_plotting = generateData(["a", "b", "c"])
+// var data_for_plotting = generateData(["a","b", "c", "d", "e"])
+// var data_for_plotting = generateData(["a"])
+
+//send to plotting function.
+var dot_plots = new Dot_Plots({
+    data: data_for_plotting,
+    element: document.querySelector('.chart-container'),
+    bins: 40,
+})
 
 // redraw chart on each resize
 // in a real-world example, it might be worth ‘throttling’ this
 // more info: http://sampsonblog.com/749/simple-throttle-function
-d3.select(window).on('resize', function(){
-    chart.draw();
-});
+// d3.select(window).on('resize', function(){
+//     chart.draw();
+// });
 
 </script>

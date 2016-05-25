@@ -20,6 +20,8 @@
 
 <!-- these will be made useful in the script below -->
 <button class="data">change data</button>
+<button class="Bins_15">Change to 15 rows</button>
+<button class="Bins_35">Change to 35 rows</button>
 
 <script>
 
@@ -46,7 +48,7 @@ var data_for_plotting = [generateData(["Birds", "Mammals"]),
 var dot_plots = new Dot_Plots({
     data: data_for_plotting[0],
     element: document.querySelector('.chart-container'),
-    bins: 40,
+    bins: 35,
 })
 
 var updateIndex = 1
@@ -57,7 +59,13 @@ d3.selectAll('button.data').on('click', function(){
     updateIndex++
 });
 
+d3.select('.Bins_15').on('click', function(){
+    dot_plots.updateBins(15);
+});
 
+d3.select('.Bins_35').on('click', function(){
+    dot_plots.updateBins(35);
+});
 // redraw chart on each resize
 // in a real-world example, it might be worth ‘throttling’ this
 // more info: http://sampsonblog.com/749/simple-throttle-function

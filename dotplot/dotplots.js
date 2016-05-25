@@ -76,21 +76,21 @@ Dot_Plots.prototype.createYScale = function(){
 
 
 Dot_Plots.prototype.seperateGroups = function() {
-    var _this = this, //bring the values from overall object into this scope
+    var t = this, //bring the values from overall object into this scope
         groupedData = [];
 
     // Generate a dotlayout using the histogram layout in d3
     var generateDotLayout = function(data){
 
         var dot_data = d3.layout.histogram()
-            .bins(_this.yScale.ticks(_this.bins))
+            .bins(t.yScale.ticks(t.bins))
             (data);
         return dot_data;
     }
 
-    _this.groups.forEach(function(group){   //run through groups
+    t.groups.forEach(function(group){   //run through groups
         var values = []                     //Vec of data for group
-        _this.data.forEach(function(d){     //append data if it is in current group
+        t.data.forEach(function(d){     //append data if it is in current group
             if(d.group == group){           //push datapoint value to group vector
                 values.push(d.val)
             }
@@ -103,9 +103,8 @@ Dot_Plots.prototype.seperateGroups = function() {
 }
 
 Dot_Plots.prototype.findRadius = function(){
-    // //find widest point in dotplots
+    //find widest point in dotplots
     var widest = 0
-    var groupedData = this.groupedData;
 
     this.groupedData.forEach(function(group){
 
@@ -117,20 +116,14 @@ Dot_Plots.prototype.findRadius = function(){
             }
         })
     })
-
+    //we dont want circles to overlap vertically either so we check to make sure they wont by taking minumum of the
+    //height of the bars and the width calculated above.
     this.radius = Math.min(this.place_scale.rangeBand()/widest * 0.90,
-                  this.yScale(this.bounds[1] - groupedData[0].vals[0].dx)) //scale is flipped so this looks wonky.
+                  this.yScale(this.bounds[1] - this.groupedData[0].vals[0].dx)) //scale is flipped so this looks wonky.
 }
 
 Dot_Plots.prototype.generateDotPlots = function() {
     var t           = this,
-        position    = this.place_scale,
-        y_scale     = this.yScale,
-        groupedData = this.groupedData,
-        h           = this.height,
-        num_bins    = this.bins,
-        dotplots    = {},
-        radius      = this.radius,
         boxWidth    = this.place_scale.rangeBand();
 
     //Make a g element for each indivual boxplot to live in.
@@ -141,10 +134,9 @@ Dot_Plots.prototype.generateDotPlots = function() {
     groups.exit()
         .remove()
 
-
     //old groups getting moved/new data.
     groups.transition().duration(t.speed)
-        .attr("transform", function(d) { return "translate(" + position(d.group) + "," + 0 + ")"; })
+        .attr("transform", function(d) { return "translate(" + t.place_scale(d.group) + "," + 0 + ")"; })
         .each(function(d){
             var currentGroup = d.group;
             var row = d3.select(this).selectAll(".row") //grab our current row
@@ -152,42 +144,42 @@ Dot_Plots.prototype.generateDotPlots = function() {
 
             row.enter().append("g") //drawing new rows
                 .attr("class", "row")
-                .attr("transform", function(d) { return "translate(" + (boxWidth/2) + "," + y_scale(d.x) + ")"; })
+                .attr("transform", function(d) { return "translate(" + (boxWidth/2) + "," + t.yScale(d.x) + ")"; })
                 .each(function(d){
-                    var totalLength = radius*d.length
+                    var totalLength = t.radius*d.length
 
                     d3.select(this).selectAll("circle")
                         .data(d)
                         .enter().append("circle")
                         .attr("fill", t.color_scale(currentGroup))
-                        .attr("r", radius/2)
+                        .attr("r", t.radius/2)
                         .attr("cx", 0)
-                        .attr("cy", -radius/2)
+                        .attr("cy", -t.radius/2)
                         .transition().duration(t.speed)
-                        .attr("cx", function(d,i){return -totalLength/2 + (radius)*i + radius/2})
+                        .attr("cx", function(d,i){return -totalLength/2 + (t.radius)*i + t.radius/2})
                 });
 
             row.transition().duration(t.speed) //updating existing rows of dots.
-                .attr("transform", function(d) { return "translate(" + (boxWidth/2) + "," + y_scale(d.x) + ")"; })
+                .attr("transform", function(d) { return "translate(" + (boxWidth/2) + "," + t.yScale(d.x) + ")"; })
                 .each(function(d){
-                    var totalLength = radius*d.length
+                    var totalLength = t.radius*d.length
 
                     var dots = d3.select(this).selectAll("circle")
                         .data(d)
 
                     dots.enter().append("circle")
                         .attr("fill", t.color_scale(currentGroup))
-                        .attr("r", radius/2)
+                        .attr("r", t.radius/2)
                         .attr("cx", 0)
-                        .attr("cy", -radius/2)
+                        .attr("cy", -t.radius/2)
                         .transition().duration(t.speed)
-                        .attr("cx", function(d,i){return -totalLength/2 + (radius)*i + radius/2})
+                        .attr("cx", function(d,i){return -totalLength/2 + (t.radius)*i + t.radius/2})
 
                     dots.transition().duration(t.speed)
                         .attr("fill", t.color_scale(currentGroup))
-                        .attr("r", radius/2)
-                        .attr("cy", -radius/2)
-                        .attr("cx", function(d,i){return -totalLength/2 + (radius)*i + radius/2})
+                        .attr("r", t.radius/2)
+                        .attr("cy", -t.radius/2)
+                        .attr("cx", function(d,i){return -totalLength/2 + (t.radius)*i + t.radius/2})
 
                     dots.exit() //shrink dots to remove.
                         .transition().duration(t.speed)
@@ -209,7 +201,7 @@ Dot_Plots.prototype.generateDotPlots = function() {
         .append("g")
         .attr("class", "dot_plot")
         .attr("id", function(d){return "group_" + d.group})
-        .attr("transform", function(d) { return "translate(" + position(d.group) + "," + 0 + ")"; })
+        .attr("transform", function(d) { return "translate(" + t.place_scale(d.group) + "," + 0 + ")"; })
         .each(function(d){
             var currentGroup = d.group;
             var row = d3.select(this).selectAll(".row") //grab the row of dots (if any)
@@ -217,17 +209,17 @@ Dot_Plots.prototype.generateDotPlots = function() {
 
             row.enter().append("g")  //for new rows append a g to hold the dots.
                 .attr("class", "row")
-                .attr("transform", function(d) { return "translate(" + (boxWidth/2) + "," + y_scale(d.x) + ")"; })
+                .attr("transform", function(d) { return "translate(" + (boxWidth/2) + "," + t.yScale(d.x) + ")"; })
                 .each(function(d){
-                    var totalLength = radius*d.length
+                    var totalLength = t.radius*d.length
                     d3.select(this).selectAll("circle")
                         .data(d).enter().append("circle")
                         .attr("fill", t.color_scale(currentGroup))
-                        .attr("r", radius/2)
+                        .attr("r", t.radius/2)
                         .attr("cx", 0)
-                        .attr("cy", -radius/2)
+                        .attr("cy", -t.radius/2)
                         .transition().duration(t.speed)
-                        .attr("cx", function(d,i){return -totalLength/2 + (radius)*i + radius/2})
+                        .attr("cx", function(d,i){return -totalLength/2 + (t.radius)*i + t.radius/2})
                 });
         })
 }
@@ -304,6 +296,18 @@ Dot_Plots.prototype.updateAxes = function(){
 
 Dot_Plots.prototype.setData = function(newData) {
     this.data = newData;
+
+    this.findUniqueGroups(); //find the unique groups we have.
+    this.createPlaceScale(); //generate the placement scale for groups
+    this.createYScale();     //Make common y scale
+    this.seperateGroups();   //Get data into the right form.
+    this.findRadius();       //figure out how big to make the dots.
+    this.generateDotPlots(); //convert data to histogram layout
+    this.updateAxes();
+}
+
+Dot_Plots.prototype.updateBins = function(bin_number) {
+    this.bins = bin_number;
 
     this.findUniqueGroups(); //find the unique groups we have.
     this.createPlaceScale(); //generate the placement scale for groups

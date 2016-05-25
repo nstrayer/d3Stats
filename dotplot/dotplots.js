@@ -52,9 +52,17 @@ Dot_Plots.prototype.createPlaceScale = function() {
         .domain(this.groups )
         .rangeBands([0, this.width]);
 
+    var range = [] //colorbrewer only has scales as little as 3.
+    if(this.groups.length == 1){
+        range = ["#1b9e77"]
+    } else if (this.groups.length == 2){
+        range = ["#1b9e77", "#d95f02"]
+    } else {
+        range = colorbrewer.Dark2[this.groups.length]
+    }
     this.color_scale = d3.scale.ordinal() //while we're here create a color scale.
         .domain(this.groups)
-        .range(colorbrewer.Dark2[this.groups.length]);
+        .range(range);
 }
 
 //In order to be able to compare distributions we need to have a common y axis.
@@ -70,7 +78,6 @@ Dot_Plots.prototype.createYScale = function(){
 Dot_Plots.prototype.seperateGroups = function() {
     var _this = this, //bring the values from overall object into this scope
         groupedData = [];
-
 
     // Generate a dotlayout using the histogram layout in d3
     var generateDotLayout = function(data){
@@ -127,18 +134,89 @@ Dot_Plots.prototype.generateDotPlots = function() {
         boxWidth    = this.place_scale.rangeBand();
 
     //Make a g element for each indivual boxplot to live in.
-    this.plot.selectAll("box_plot")
-        .data(this.groupedData).enter()
+    var groups = this.plot.selectAll(".dot_plot")
+        .data(this.groupedData, function(d){return d.group})
+
+    //remove the groups leaving.
+    groups.exit()
+        .remove()
+
+
+    //old groups getting moved/new data.
+    groups.transition().duration(t.speed)
+        .attr("transform", function(d) { return "translate(" + position(d.group) + "," + 0 + ")"; })
+        .each(function(d){
+            var currentGroup = d.group;
+            var row = d3.select(this).selectAll(".row") //grab our current row
+                .data(d.vals)                           //data is in the value element
+
+            row.enter().append("g") //drawing new rows
+                .attr("class", "row")
+                .attr("transform", function(d) { return "translate(" + (boxWidth/2) + "," + y_scale(d.x) + ")"; })
+                .each(function(d){
+                    var totalLength = radius*d.length
+
+                    d3.select(this).selectAll("circle")
+                        .data(d)
+                        .enter().append("circle")
+                        .attr("fill", t.color_scale(currentGroup))
+                        .attr("r", radius/2)
+                        .attr("cx", 0)
+                        .attr("cy", -radius/2)
+                        .transition().duration(t.speed)
+                        .attr("cx", function(d,i){return -totalLength/2 + (radius)*i + radius/2})
+                });
+
+            row.transition().duration(t.speed) //updating existing rows of dots.
+                .attr("transform", function(d) { return "translate(" + (boxWidth/2) + "," + y_scale(d.x) + ")"; })
+                .each(function(d){
+                    var totalLength = radius*d.length
+
+                    var dots = d3.select(this).selectAll("circle")
+                        .data(d)
+
+                    dots.enter().append("circle")
+                        .attr("fill", t.color_scale(currentGroup))
+                        .attr("r", radius/2)
+                        .attr("cx", 0)
+                        .attr("cy", -radius/2)
+                        .transition().duration(t.speed)
+                        .attr("cx", function(d,i){return -totalLength/2 + (radius)*i + radius/2})
+
+                    dots.transition().duration(t.speed)
+                        .attr("fill", t.color_scale(currentGroup))
+                        .attr("r", radius/2)
+                        .attr("cy", -radius/2)
+                        .attr("cx", function(d,i){return -totalLength/2 + (radius)*i + radius/2})
+
+                    dots.exit() //shrink dots to remove.
+                        .transition().duration(t.speed)
+                        .attr("r", 0.00001)
+                        .remove()
+                });
+
+            row.exit()
+                .each(function(d){
+                    d3.select(this).selectAll("circle")
+                        .transition().duration(t.speed)
+                        .attr("r", 0.000001)
+                })
+                .remove()
+            }); //closes the transition for the current group.
+
+    //new groups getting drawn.
+    groups.enter()
         .append("g")
+        .attr("class", "dot_plot")
         .attr("id", function(d){return "group_" + d.group})
         .attr("transform", function(d) { return "translate(" + position(d.group) + "," + 0 + ")"; })
         .each(function(d){
             var currentGroup = d.group;
-            var hist = d3.select(this).selectAll(".dots") //grab our current g
-                .data(d.vals)                             //data is in the value element
+            var row = d3.select(this).selectAll(".row") //grab the row of dots (if any)
+                .data(d.vals)                           //data is in the value element
 
-            hist.enter().append("g")
-                .attr("class", function(d){return "dots " + d.y})
+            row.enter().append("g")  //for new rows append a g to hold the dots.
+                .attr("class", "row")
                 .attr("transform", function(d) { return "translate(" + (boxWidth/2) + "," + y_scale(d.x) + ")"; })
                 .each(function(d){
                     var totalLength = radius*d.length
@@ -151,33 +229,6 @@ Dot_Plots.prototype.generateDotPlots = function() {
                         .transition().duration(t.speed)
                         .attr("cx", function(d,i){return -totalLength/2 + (radius)*i + radius/2})
                 });
-
-            //
-            // hist.transition()
-            //     .each(function(d){
-            //         var totalLength = radius*d.length
-            //
-            //         var yPos = x(d.y),
-            //             dots = d3.select(this).selectAll("circle").data(d);
-            //
-            //         dots.exit().remove()
-            //
-            //         dots.transition().duration(speed)
-            //             .attr("r", radius/2)
-            //             .attr("cy", -radius/2)
-            //             .attr("cx", function(d,i){return -totalLength/2 + (radius)*i + radius/2})
-            //
-            //         dots.enter()
-            //             .append("circle")
-            //             .attr("r", radius/2)
-            //             .attr("cx", w)
-            //             .attr("cy", -radius/2)
-            //             .transition().duration(speed)
-            //             .attr("cx", function(d,i){return -totalLength/2 + (radius)*i + radius/2})
-            //     });
-
-            // hist.exit()
-            //     .remove()
         })
 }
 
@@ -216,13 +267,49 @@ Dot_Plots.prototype.addAxes = function(){
 
 Dot_Plots.prototype.updateAxes = function(){
 
+    //define the two axes
     var yAxis = d3.svg.axis()
-        .scale(this.xScale)
-        .orient("right");
+        .scale(this.yScale)
+        .orient("left");
 
-    this.plot.select(".y.axis").transition()
-        .attr("transform", "translate(0," + this.height + ")")
+    var xAxis = d3.svg.axis()
+        .scale(this.place_scale)
+        .orient("bottom");
+
+    //update the x axis
+    this.plot.select(".y.axis").transition().duration(this.speed)
         .call(yAxis)
             .selectAll("text")
-            .attr("transform", "translate( 0 ," + -4 + ")");
+            .attr("transform", "translate( 4 ," + -6 + ")");
+
+    var placeAxis = this.plot.select(".x.axis")
+        .attr("fill-opacity", 0)
+        .attr("transform", "translate(0," + this.height + ")")
+        .call(xAxis)
+        .transition().duration(this.speed)
+        .attr("fill-opacity", 1)
+
+
+    placeAxis.select("path") //get rid of the horizontal line
+        .attr("stroke-width", 0)
+
+    placeAxis.selectAll("line") //get rid of the ticks, they look like datapoints
+        .attr("stroke-width", 0)
+
+    placeAxis.selectAll("text")
+        .attr("font-size", "1.2em")
+        .attr("font-family", "optima")
+
+}
+
+Dot_Plots.prototype.setData = function(newData) {
+    this.data = newData;
+
+    this.findUniqueGroups(); //find the unique groups we have.
+    this.createPlaceScale(); //generate the placement scale for groups
+    this.createYScale();     //Make common y scale
+    this.seperateGroups();   //Get data into the right form.
+    this.findRadius();       //figure out how big to make the dots.
+    this.generateDotPlots(); //convert data to histogram layout
+    this.updateAxes();
 }

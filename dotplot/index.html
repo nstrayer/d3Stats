@@ -26,7 +26,7 @@
 function generateData(groups){
     var data = []
     groups.forEach(function(group){
-        var numberOfValues = 500;
+        var numberOfValues = 200;
         var randomNumbers = d3.range(numberOfValues).map(d3.random.normal())
         randomNumbers.forEach( function(num){
             data.push( {"group": group, "val": num} )
@@ -36,15 +36,27 @@ function generateData(groups){
 }
 
 // var data_for_plotting = generateData(["a", "b", "c"])
-var data_for_plotting = generateData(["a","b", "c", "d", "e"])
-// var data_for_plotting = generateData(["a"])
+var data_for_plotting = [generateData(["Birds", "Mammals"]),
+                         generateData(["a"]),
+                         generateData(["a","b", "c", "d", "e"]),
+                         generateData(["a", "b", "c"])
+                         ]
 
 //send to plotting function.
 var dot_plots = new Dot_Plots({
-    data: data_for_plotting,
+    data: data_for_plotting[0],
     element: document.querySelector('.chart-container'),
     bins: 40,
 })
+
+var updateIndex = 1
+// change data on click to something randomly-generated
+d3.selectAll('button.data').on('click', function(){
+    console.log(updateIndex)
+    dot_plots.setData(data_for_plotting[updateIndex%4]);
+    updateIndex++
+});
+
 
 // redraw chart on each resize
 // in a real-world example, it might be worth ‘throttling’ this

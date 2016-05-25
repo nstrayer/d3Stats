@@ -4,11 +4,6 @@
 <script src="dotplots.js"></script>
 
 <style>
-/* a little bit of CSS to make the chart readable */
-.line {
-    fill: none;
-    stroke-width: 4px;
-}
 .axis path, .tick line {
     fill: none;
     stroke: #333;
@@ -66,11 +61,10 @@ d3.select('.Bins_15').on('click', function(){
 d3.select('.Bins_35').on('click', function(){
     dot_plots.updateBins(35);
 });
+
 // redraw chart on each resize
-// in a real-world example, it might be worth ‘throttling’ this
-// more info: http://sampsonblog.com/749/simple-throttle-function
-// d3.select(window).on('resize', function(){
-//     chart.draw();
-// });
+d3.select(window).on('resize', function(){
+    dot_plots.resize();
+});
 
 </script>

@@ -317,3 +317,22 @@ Dot_Plots.prototype.updateBins = function(bin_number) {
     this.generateDotPlots(); //convert data to histogram layout
     this.updateAxes();
 }
+
+Dot_Plots.prototype.resize = function(bin_number) {
+    //update width and height
+    this.width   = this.element.offsetWidth - (2*this.padding);
+    this.height  = (this.width / 2) - (2*this.padding);
+    //update the svg with this info.
+    var svg = d3.select(this.element).select('svg')
+        .attr('width',  this.width  + (2*this.padding))
+        .attr('height', this.height + (2*this.padding));
+
+    //refresh the viz. 
+    this.findUniqueGroups(); //find the unique groups we have.
+    this.createPlaceScale(); //generate the placement scale for groups
+    this.createYScale();     //Make common y scale
+    this.seperateGroups();   //Get data into the right form.
+    this.findRadius();       //figure out how big to make the dots.
+    this.generateDotPlots(); //convert data to histogram layout
+    this.updateAxes();
+}

@@ -34,34 +34,6 @@ Dot_Plots.prototype.draw = function() {
     this.addAxes();          //draw the axes
 }
 
-Dot_Plots.prototype.addAxes = function(){
-
-    var yAxis = d3.svg.axis()
-        .scale(this.yScale)
-        .orient("left");
-
-    this.plot.append("g")
-        .attr("class", "y axis")
-        .attr("transform", "translate(" + 0 + ",0)")
-        .call(yAxis)
-            .selectAll("text")
-            .attr("transform", "translate( 4 ," + -6 + ")");
-}
-
-Dot_Plots.prototype.updateAxes = function(){
-
-    var yAxis = d3.svg.axis()
-        .scale(this.xScale)
-        .orient("right");
-
-    this.plot.select(".x.axis").transition()
-        .attr("transform", "translate(0," + this.height + ")")
-        .call(yAxis)
-            .selectAll("text")
-            .attr("transform", "translate( 0 ," + -4 + ")");
-}
-
-
 //Generate a scale for placing the individual dot plots in parent svg.
 Dot_Plots.prototype.findUniqueGroups = function() {
     //find unique groups
@@ -80,6 +52,9 @@ Dot_Plots.prototype.createPlaceScale = function() {
         .domain(this.groups )
         .rangeBands([0, this.width]);
 
+    this.color_scale = d3.scale.ordinal() //while we're here create a color scale.
+        .domain(this.groups)
+        .range(colorbrewer.Dark2[this.groups.length]);
 }
 
 //In order to be able to compare distributions we need to have a common y axis.
@@ -91,9 +66,10 @@ Dot_Plots.prototype.createYScale = function(){
         .range([this.height,0]);
 }
 
+
 Dot_Plots.prototype.seperateGroups = function() {
     var _this = this, //bring the values from overall object into this scope
-        groupedData = {};
+        groupedData = [];
 
 
     // Generate a dotlayout using the histogram layout in d3
@@ -113,7 +89,7 @@ Dot_Plots.prototype.seperateGroups = function() {
             }
         })
         //For this group, use the histogram function to generate the data into binned values.
-        groupedData[group] = generateDotLayout(values)
+        groupedData.push({"group": group, "vals": generateDotLayout(values)})
     })
 
     this.groupedData = groupedData       //send it to the object scope.
@@ -124,48 +100,129 @@ Dot_Plots.prototype.findRadius = function(){
     var widest = 0
     var groupedData = this.groupedData;
 
-    this.groups.forEach(function(group){
+    this.groupedData.forEach(function(group){
 
-        var group_data = groupedData[group]
+        var group_data = group.vals
 
-        group_data.forEach(function(d,i){
+        group_data.forEach(function(d,i){ //scan through values to find widest band.
             if(d.y > widest){
                 widest = d.y
             }
         })
     })
 
-    this.radius = this.place_scale.rangeBand()/widest * 0.90
+    this.radius = Math.min(this.place_scale.rangeBand()/widest * 0.90,
+                  this.yScale(this.bounds[1] - groupedData[0].vals[0].dx)) //scale is flipped so this looks wonky.
 }
 
 Dot_Plots.prototype.generateDotPlots = function() {
-    var position    = this.place_scale,
+    var t           = this,
+        position    = this.place_scale,
         y_scale     = this.yScale,
         groupedData = this.groupedData,
         h           = this.height,
         num_bins    = this.bins,
         dotplots    = {},
-        radius      = this.radius;
-
-        console.log("the radius is " + radius)
+        radius      = this.radius,
+        boxWidth    = this.place_scale.rangeBand();
 
     //Make a g element for each indivual boxplot to live in.
     this.plot.selectAll("box_plot")
-        .data(this.groups).enter()
+        .data(this.groupedData).enter()
         .append("g")
-        .attr("id", function(d){return "group" + d})
-        .attr("transform", function(d) { return "translate(" + position(d) + "," + 0 + ")"; })
+        .attr("id", function(d){return "group_" + d.group})
+        .attr("transform", function(d) { return "translate(" + position(d.group) + "," + 0 + ")"; })
         .each(function(d){
+            var currentGroup = d.group;
+            var hist = d3.select(this).selectAll(".dots") //grab our current g
+                .data(d.vals)                             //data is in the value element
 
-            dotplots[d] = new Dot_Plot({
-            	element:   d3.select(this),      //grab the assembeled g.
-                data:      groupedData[d],       //give it the data that we desire.
-                yScale:    y_scale,              //pass y scale.
-                thickness: position.rangeBand(), //how wide is the area the plot has to use?
-                center:    position(d),          //where is it centered
-                height:    h,
-                group:     d,
-                radius:    radius
-            });
+            hist.enter().append("g")
+                .attr("class", function(d){return "dots " + d.y})
+                .attr("transform", function(d) { return "translate(" + (boxWidth/2) + "," + y_scale(d.x) + ")"; })
+                .each(function(d){
+                    var totalLength = radius*d.length
+                    d3.select(this).selectAll("circle")
+                        .data(d).enter().append("circle")
+                        .attr("fill", t.color_scale(currentGroup))
+                        .attr("r", radius/2)
+                        .attr("cx", 0)
+                        .attr("cy", -radius/2)
+                        .transition().duration(t.speed)
+                        .attr("cx", function(d,i){return -totalLength/2 + (radius)*i + radius/2})
+                });
+
+            //
+            // hist.transition()
+            //     .each(function(d){
+            //         var totalLength = radius*d.length
+            //
+            //         var yPos = x(d.y),
+            //             dots = d3.select(this).selectAll("circle").data(d);
+            //
+            //         dots.exit().remove()
+            //
+            //         dots.transition().duration(speed)
+            //             .attr("r", radius/2)
+            //             .attr("cy", -radius/2)
+            //             .attr("cx", function(d,i){return -totalLength/2 + (radius)*i + radius/2})
+            //
+            //         dots.enter()
+            //             .append("circle")
+            //             .attr("r", radius/2)
+            //             .attr("cx", w)
+            //             .attr("cy", -radius/2)
+            //             .transition().duration(speed)
+            //             .attr("cx", function(d,i){return -totalLength/2 + (radius)*i + radius/2})
+            //     });
+
+            // hist.exit()
+            //     .remove()
         })
+}
+
+Dot_Plots.prototype.addAxes = function(){
+
+    var yAxis = d3.svg.axis()
+        .scale(this.yScale)
+        .orient("left");
+
+    this.plot.append("g")
+        .attr("class", "y axis")
+        .attr("transform", "translate(" + 0 + ",0)")
+        .call(yAxis)
+            .selectAll("text")
+            .attr("transform", "translate( 4 ," + -6 + ")");
+
+    var xAxis = d3.svg.axis()
+        .scale(this.place_scale)
+        .orient("bottom");
+
+    var placeAxis = this.plot.append("g")
+        .attr("class", "x axis")
+        .attr("transform", "translate(0," + this.height + ")")
+        .call(xAxis)
+
+    placeAxis.select("path") //get rid of the horizontal line
+        .attr("stroke-width", 0)
+
+    placeAxis.selectAll("line") //get rid of the ticks, they look like datapoints
+        .attr("stroke-width", 0)
+
+    placeAxis.selectAll("text")
+        .attr("font-size", "1.2em")
+        .attr("font-family", "optima")
+}
+
+Dot_Plots.prototype.updateAxes = function(){
+
+    var yAxis = d3.svg.axis()
+        .scale(this.xScale)
+        .orient("right");
+
+    this.plot.select(".y.axis").transition()
+        .attr("transform", "translate(0," + this.height + ")")
+        .call(yAxis)
+            .selectAll("text")
+            .attr("transform", "translate( 0 ," + -4 + ")");
 }

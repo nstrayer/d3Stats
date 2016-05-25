@@ -1,6 +1,6 @@
 <!-- load in D3 and Chart constructor scripts -->
 <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/d3/3.5.17/d3.min.js"></script>
-<script src="single_dotplot.js"></script>
+<script src="colorbrewer.min.js"></script>
 <script src="dotplots.js"></script>
 
 <style>
@@ -19,9 +19,6 @@
 <div class="chart-container" style="max-width: 1000px;"></div>
 
 <!-- these will be made useful in the script below -->
-<button class="color" data-color="red">red line</button>
-<button class="color" data-color="green">green line</button>
-<button class="color" data-color="blue">blue line</button>
 <button class="data">change data</button>
 
 <script>
@@ -38,8 +35,8 @@ function generateData(groups){
     return data;
 }
 
-var data_for_plotting = generateData(["a", "b", "c"])
-// var data_for_plotting = generateData(["a","b", "c", "d", "e"])
+// var data_for_plotting = generateData(["a", "b", "c"])
+var data_for_plotting = generateData(["a","b", "c", "d", "e"])
 // var data_for_plotting = generateData(["a"])
 
 //send to plotting function.
